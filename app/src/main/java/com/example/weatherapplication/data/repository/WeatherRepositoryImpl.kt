@@ -25,8 +25,7 @@ class WeatherRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.getCurrentWeather(
                 latitude = location.latitude,
-                longitude = location.longitude,
-                apiKey = BuildConfig.WEATHER_API_KEY
+                longitude = location.longitude
             )
             
             Result.success(response.toDomain())

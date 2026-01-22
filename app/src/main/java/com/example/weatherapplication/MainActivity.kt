@@ -1,47 +1,68 @@
 package com.example.weatherapplication
 
+import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.weatherapplication.ui.theme.WeatherApplicationTheme
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
+import androidx.navigation.compose.rememberNavController
+import com.example.weatherapplication.domain.repository.AuthRepository
+import com.example.weatherapplication.presentation.navigation.NavGraph
+import com.example.weatherapplication.presentation.navigation.Screen
+import com.example.weatherapplication.presentation.theme.WeatherApplicationTheme
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    
+    @Inject
+    lateinit var authRepository: AuthRepository
+    
+    private val locationPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        // Handle permission result if needed
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        
+        // Request location permissions
+        locationPermissionRequest.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        )
+        
         setContent {
             WeatherApplicationTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    val navController = rememberNavController()
+                    
+                    // Determine start destination based on auth state
+                    val startDestination by produceState<String?>(
+                        initialValue = null
+                    ) {
+                        val isSignedIn = authRepository.isSignedIn()
+                        value = if (isSignedIn) Screen.Weather.route else Screen.Login.route
+                    }
+                    
+                    // Wait for start destination to be determined
+                    startDestination?.let { destination ->
+                        NavGraph(
+                            navController = navController,
+                            startDestination = destination
+                        )
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    WeatherApplicationTheme {
-        Greeting("Android")
     }
 }

@@ -5,6 +5,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -22,6 +23,10 @@ object NetworkModule {
     
     private const val BASE_URL = "https://api.openweathermap.org/data/2.5/"
     
+    // TEMPORARY: Hardcoded API key for testing
+    // TODO: Remove before committing to GitHub!
+    private const val API_KEY = "fdb5eb1452b2c40292734c3ee9c75abc"
+    
     /**
      * Provides OkHttpClient with logging interceptor
      */
@@ -32,8 +37,25 @@ object NetworkModule {
             level = HttpLoggingInterceptor.Level.BODY
         }
         
+        // API Key Interceptor - adds API key to all requests
+        val apiKeyInterceptor = Interceptor { chain ->
+            val original = chain.request()
+            val originalUrl = original.url
+            
+            val url = originalUrl.newBuilder()
+                .addQueryParameter("appid", API_KEY)
+                .build()
+            
+            val request = original.newBuilder()
+                .url(url)
+                .build()
+            
+            chain.proceed(request)
+        }
+        
         return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
+            .addInterceptor(apiKeyInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
