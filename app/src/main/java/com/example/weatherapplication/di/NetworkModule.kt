@@ -1,5 +1,6 @@
 package com.example.weatherapplication.di
 
+import com.example.weatherapplication.BuildConfig
 import com.example.weatherapplication.data.remote.api.WeatherApiService
 import dagger.Module
 import dagger.Provides
@@ -16,19 +17,18 @@ import javax.inject.Singleton
 /**
  * Hilt module for network dependencies
  * Provides Retrofit and API service
+ *
+ * IMPORTANT: API key must be in local.properties as:
+ * WEATHER_API_KEY=your_actual_key_here
  */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    
+
     private const val BASE_URL = "https://api.openweathermap.org/data/2.5/"
-    
-    // TEMPORARY: Hardcoded API key for testing
-    // TODO: Remove before committing to GitHub!
-    private const val API_KEY = "fdb5eb1452b2c40292734c3ee9c75abc"
-    
+
     /**
-     * Provides OkHttpClient with logging interceptor
+     * Provides OkHttpClient with logging and API key interceptor
      */
     @Provides
     @Singleton
@@ -36,23 +36,26 @@ object NetworkModule {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
-        
+
+        // Get API key from BuildConfig (injected from local.properties at build time)
+        val apiKey = BuildConfig.WEATHER_API_KEY
+
         // API Key Interceptor - adds API key to all requests
         val apiKeyInterceptor = Interceptor { chain ->
             val original = chain.request()
             val originalUrl = original.url
-            
+
             val url = originalUrl.newBuilder()
-                .addQueryParameter("appid", API_KEY)
+                .addQueryParameter("appid", apiKey)
                 .build()
-            
+
             val request = original.newBuilder()
                 .url(url)
                 .build()
-            
+
             chain.proceed(request)
         }
-        
+
         return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
             .addInterceptor(apiKeyInterceptor)
@@ -61,7 +64,7 @@ object NetworkModule {
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
-    
+
     /**
      * Provides Retrofit instance
      */
@@ -74,7 +77,7 @@ object NetworkModule {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
-    
+
     /**
      * Provides WeatherApiService
      */

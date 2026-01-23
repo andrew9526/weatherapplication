@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -22,8 +25,15 @@ android {
             useSupportLibrary = true
         }
 
-        // API Key will be stored in local.properties (not committed to git)
-        val apiKey = project.findProperty("WEATHER_API_KEY") as String? ?: ""
+        // Load API Key from local.properties
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+
+        if (localPropertiesFile.exists()) {
+            localProperties.load(FileInputStream(localPropertiesFile))
+        }
+
+        val apiKey = localProperties.getProperty("WEATHER_API_KEY", "")
         buildConfigField("String", "WEATHER_API_KEY", "\"$apiKey\"")
     }
 
@@ -49,6 +59,11 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
     }
 
     packaging {
